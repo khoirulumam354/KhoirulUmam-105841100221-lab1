@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View, StyleSheet, Alert } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,22 +20,42 @@ const SignUpPage = () => {
 
   const navigation = useNavigation();
 
+  const checkEmailExists = async (email) => {
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/users');
+      const users = await response.json();
+      // Memeriksa apakah email yang dimasukkan ada di daftar email di API
+      const emailMatches = users.some(user => user.email === email);
+      return emailMatches;
+    } catch (error) {
+      Alert.alert('Error', 'Gagal mengambil data pengguna dari API');
+      return false;
+    }
+  };
+
   const onSubmit = async () => {
     if (formSignUp.name && formSignUp.email && formSignUp.password) {
-      try {
-        await AsyncStorage.setItem('user', JSON.stringify({
-          name: formSignUp.name,
-          email: formSignUp.email,
-          password: formSignUp.password
-        }));
-        alert('Sign Up Berhasil');
-        navigation.navigate('Login');
-        checkStoredData();
-      } catch (error) {
-        alert('Terjadi kesalahan saat menyimpan data: ' + error.message);
+      const emailExists = await checkEmailExists(formSignUp.email);
+      
+      if (emailExists) {
+        try {
+          // Hanya izinkan sign-up jika email cocok dengan salah satu email di API
+          await AsyncStorage.setItem('user', JSON.stringify({
+            name: formSignUp.name,
+            email: formSignUp.email,
+            password: formSignUp.password
+          }));
+          Alert.alert('Sign Up Berhasil', 'Akun berhasil dibuat');
+          navigation.navigate('Login');
+          checkStoredData();
+        } catch (error) {
+          Alert.alert('Error', 'Terjadi kesalahan saat menyimpan data');
+        }
+      } else {
+        Alert.alert('Sign Up Gagal', 'Email tidak terdaftar di sistem kami');
       }
     } else {
-      alert('Sign Up Gagal', 'Semua field harus diisi');
+      Alert.alert('Sign Up Gagal', 'Semua field harus diisi');
     }
   };
 
